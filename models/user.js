@@ -1,5 +1,8 @@
 const connection = require('../db-config');
 const Joi = require('joi');
+// langage de description de schéma et validateur de données
+const argon2 = require('argon2');
+//bibliothèque qui aide à hacher un mot de passe
 
 const db = connection.promise();
 
@@ -11,8 +14,30 @@ const validate = (data, forCreation = true) => {
     lastname: Joi.string().max(255).presence(presence),
     city: Joi.string().allow(null, '').max(255),
     language: Joi.string().allow(null, '').max(255),
+    hashedPassword: Joi.string().max(255).presence(presence),
   }).validate(data, { abortEarly: false }).error;
 };
+
+const hashingOptions = {
+  type: argon2.argon2id,
+  memoryCost: 2 ** 16,
+  timeCost: 5,
+  parallelism: 1
+};
+
+const hashPassword = (plainPassword) => {
+  return argon2.hash(plainPassword, hashingOptions);
+};
+//hashPasswordfonction qui renverra simplement la promesse d'un mot de passe haché 
+//en appelant la fonction de hachage fournie par le package argon2 NPM avec 
+//les paramètres de hachage recommandés.
+
+const verifyPassword = (plainPassword, hashedPassword) => {
+  return argon2.verify(hashedPassword, plainPassword, hashingOptions);
+};
+//verifyPasswordfonction qui comparera un mot de passe haché au mot de passe simple 
+//correspondant pour voir s'ils correspondent.
+
 
 const findMany = ({ filters: { language } }) => {
   let sql = 'SELECT * FROM users';
@@ -69,4 +94,6 @@ module.exports = {
   destroy,
   findByEmail,
   findByEmailWithDifferentId,
+  hashPassword,
+  verifyPassword,
 };

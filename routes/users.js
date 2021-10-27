@@ -26,14 +26,24 @@ usersRouter.get('/:id', (req, res) => {
 });
 
 usersRouter.post('/', (req, res) => {
+  console.log(req.body)
   const { email } = req.body;
   let validationErrors = null;
-  User.findByEmail(email)
+  return User.hashPassword(req.body.hashedPassword)
+  //on va chercher la fonction hashPassword dans User importer en import
+  .then(finalPassword => {
+    User.findByEmail(email)
     .then((existingUserWithEmail) => {
       if (existingUserWithEmail) return Promise.reject('DUPLICATE_EMAIL');
       validationErrors = User.validate(req.body);
       if (validationErrors) return Promise.reject('INVALID_DATA');
-      return User.create(req.body);
+      return User.create({email,
+        firstname: req.body.firstname,
+        lastname: req.body.lastname,
+        city: req.body.city,
+        language: req.body.language,
+        hashedPassword: finalPassword,
+      });
     })
     .then((createdUser) => {
       res.status(201).json(createdUser);
@@ -44,9 +54,38 @@ usersRouter.post('/', (req, res) => {
         res.status(409).json({ message: 'This email is already used' });
       else if (err === 'INVALID_DATA')
         res.status(422).json({ validationErrors });
-      else res.status(500).send('Error saving the user');
+      else res.status(500).json({message: 'Error saving the user', err});
     });
+  });
 });
+
+
+usersRouter.post('/auth/checkCredentials', (req, res) => {
+  const { email } = req.body;
+  let validationErrors = null;
+  return User.hashPassword(req.body.hashedPassword)
+  //on va chercher la fonction hashPassword dans User importer en import
+  .then(finalPassword => {
+    User.findByEmail(email)
+    .then((existingUserWithEmail) => {
+      if (existingUserWithEmail) return Promise.reject('DUPLICATE_EMAIL');
+      validationErrors = User.validate(req.body);
+      if (validationErrors) return Promise.reject('INVALID_DATA');
+      return User.create({email,
+        hashedPassword: finalPassword,
+      });
+    })
+    .then((createdUser) => {
+      res.status(200).json(createdUser);
+    })
+    .catch((err) => {
+      console.error(err);
+      if (err === 'DUPLICATE_EMAIL')
+        res.status(401).json({ message: 'This email is already used' });
+    });
+  });
+});
+
 
 usersRouter.put('/:id', (req, res) => {
   let existingUser = null;
@@ -90,4 +129,7 @@ usersRouter.delete('/:id', (req, res) => {
     });
 });
 
+module.exports = usersRouter;
+module.exports = usersRouter;
+module.exports = usersRouter;
 module.exports = usersRouter;
